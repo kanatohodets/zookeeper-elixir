@@ -13,8 +13,8 @@ defmodule Zookeeper.Party do
   @doc """
   Join a party on the given path
   """
-  def start(client, path, data) do
-    GenServer.start(__MODULE__, {client, path, data})
+  def start(client, path, identifier) do
+    GenServer.start(__MODULE__, {client, path, identifier})
   end
 
   @doc """
@@ -27,8 +27,8 @@ defmodule Zookeeper.Party do
   @doc """
   Join a party on the given path
   """
-  def start_link(client, path, data) do
-    GenServer.start_link(__MODULE__, {client, path, data})
+  def start_link(client, path, identifier) do
+    GenServer.start_link(__MODULE__, {client, path, identifier})
   end
 
   def start_link(client, path) do
@@ -49,19 +49,25 @@ defmodule Zookeeper.Party do
   @doc """
   Leave the party
   """
+  def join(pid) do
+    GenServer.call(pid, :join)
+  end
+
+  @doc """
+  Leave the party
+  """
   def leave(pid) do
     GenServer.call(pid, :leave)
   end
 
   ## Server
-
-  def init({client, path, data}) do
+  def init({client, path, identifier, data}) do
     prefix = "#{UUID.uuid4(:hex)}#{@node_name}"
     state = %{
       client: client,
       path: path,
       prefix: prefix,
-      data: data,
+      identifier: identifier,
     }
     do_join(state)
   end
@@ -117,8 +123,8 @@ defmodule Zookeeper.Party do
     end
   end
 
-  defp ensure_node(%{client: zk, path: path, prefix: prefix, data: data}=state) do
-    case Zookeeper.Client.create(zk, "#{path}/#{prefix}", data, makepath: true, create_mode: :ephemeral) do
+  defp ensure_node(%{client: zk, path: path, prefix: prefix, identifier: identifier}=state) do
+    case Zookeeper.Client.create(zk, "#{path}/#{prefix}", identifier, makepath: true, create_mode: :ephemeral) do
       {:ok, _created_path} -> {:ok, state}
       {:node_exists, _created_path} -> {:ok, state}
     end
